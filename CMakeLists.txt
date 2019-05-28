@@ -8,11 +8,8 @@ list(GET VERSION_LIST 1 PY_VERSION_MINOR)
 list(GET VERSION_LIST 2 PY_VERSION_PATCH)
 set(PY_VERSION "${PY_VERSION_MAJOR}.${PY_VERSION_MINOR}.${PY_VERSION_PATCH}")
 
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_CONFIGURATION_TYPES Release CACHE STRING "Release configuration" FORCE)
-    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
-    # Set the possible values of build type for cmake-gui
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release")
+if(NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_CONFIGURATION_TYPES "Release;Debug" CACHE STRING "Release configuration" FORCE)
 endif()
 
 if(APPLE)
@@ -383,7 +380,23 @@ set(EXTRA_PYTHONPATH "" CACHE STRING
 if(UNIX)
     set(PYCONFIG_BUILD_DIR ${BIN_BUILD_DIR})
     configure_file(cmake/config-unix/pyconfig.h.in
-                   ${PYCONFIG_BUILD_DIR}/pyconfig.h)
+                   ${PYCONFIG_BUILD_DIR}/pyconfig-gen.h)
+
+    set(pyconfig_out ${PYCONFIG_BUILD_DIR}/pyconfig.h)
+    if(CMAKE_BUILD_TYPE STREQUAL "")
+        set(pyconfig_out ${PYCONFIG_BUILD_DIR}/$<CONFIG>/pyconfig.h)
+    endif()
+
+    file(GENERATE OUTPUT ${pyconfig_out}
+         INPUT ${PYCONFIG_BUILD_DIR}/pyconfig-gen.h)
+
+    # Install 'pyconfig.h'
+    if(INSTALL_DEVELOPMENT)
+        install(FILES ${pyconfig_out}
+                DESTINATION ${INCLUDE_INSTALL_DIR}/
+                COMPONENT Development)
+    endif()
+
 elseif(WIN32)
     set(PYCONFIG_BUILD_DIR ${SRC_DIR}/PC) # In a windows build tree, 'pyconfig.h' is NOT required to
                                           # live along side the python executable.
@@ -392,13 +405,13 @@ elseif(WIN32)
     if(MINGW)
       set(PYCONFIG_BUILD_DIR cmake/config-mingw)
     endif()
-endif()
 
-# Install 'pyconfig.h'
-if(INSTALL_DEVELOPMENT)
-    install(FILES ${PYCONFIG_BUILD_DIR}/pyconfig.h
-            DESTINATION ${INCLUDE_INSTALL_DIR}/
-            COMPONENT Development)
+    # Install 'pyconfig.h'
+    if(INSTALL_DEVELOPMENT)
+        install(FILES ${PYCONFIG_BUILD_DIR}/pyconfig.h
+                DESTINATION ${INCLUDE_INSTALL_DIR}/
+                COMPONENT Development)
+    endif()
 endif()
 
 # Set include directories
@@ -579,9 +592,19 @@ if(UNIX)
         set(MAKEFILE_LDSHARED_FLAGS "-dynamiclib -headerpad_max_install_names -undefined dynamic_lookup")
     endif()
     configure_file(cmake/makefile-variables.in
-                   ${BIN_BUILD_DIR}/Makefile @ONLY)
+                   ${BIN_BUILD_DIR}/Makefile-gen @ONLY)
+    
+    
+    set(makefile_out "${BIN_BUILD_DIR}/Makefile")
+    if(CMAKE_BUILD_TYPE MATCHES "")
+        set(makefile_out "${BIN_BUILD_DIR}/$<CONFIG>/Makefile")
+    endif()
+
+    file(GENERATE OUTPUT ${makefile_out}
+         INPUT ${BIN_BUILD_DIR}/Makefile-gen)
+
     if(INSTALL_DEVELOPMENT)
-        install(FILES ${BIN_BUILD_DIR}/Makefile
+        install(FILES ${makefile_out}
                 DESTINATION ${LIB_CONFIG_INSTALL_DIR}
                 RENAME Makefile
                 COMPONENT Development)
