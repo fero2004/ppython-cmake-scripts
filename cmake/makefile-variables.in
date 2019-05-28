@@ -42,7 +42,7 @@ INSTALL_SHARED= ${INSTALL} -m 555
 MAKESETUP=      $(srcdir)/Modules/makesetup
 
 # Compiler options
-OPT=            @CMAKE_C_FLAGS@ -DNDEBUG
+OPT=            @CMAKE_C_FLAGS@ $<$<CONFIG:Release>:-DNDEBUG>
 BASECFLAGS=	 -Wno-unused-result -Wsign-compare -Wunreachable-code
 CFLAGS=         @CMAKE_C_FLAGS@
 # Both CPPFLAGS and LDFLAGS need to contain the shell's value for setup.py to
