@@ -25,8 +25,16 @@ if(CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS "2.8.11")
 endif()
 
 message(STATUS "The system name is ${CMAKE_SYSTEM_NAME}")
-message(STATUS "The system processor is ${CMAKE_SYSTEM_PROCESSOR}")
-message(STATUS "The system version is ${CMAKE_SYSTEM_VERSION}")
+
+if(NOT CMAKE_CROSSCOMPILING)
+    message(STATUS "The system processor is ${CMAKE_SYSTEM_PROCESSOR}")
+    message(STATUS "The system version is ${CMAKE_SYSTEM_VERSION}")
+else()
+    if(APPLE AND NOT IS_MULTICONFIG)
+        message(STATUS "Supported architectures are ${CMAKE_OSX_ARCHITECTURES}")
+        message(STATUS "The minimum system version is ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    endif()
+endif()
 
 # Find any dependencies
 if(USE_SYSTEM_BZip2)
@@ -155,11 +163,23 @@ endif()
 message(STATUS "${_msg} - ${ABIFLAGS}")
 
 set(_msg "Checking SOABI")
-try_run(PLATFORM_RUN PLATFORM_COMPILE
-        ${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/cmake/platform.c
-        RUN_OUTPUT_VARIABLE PLATFORM_TRIPLET)
-if(NOT PLATFORM_COMPILE)
-  message(FATAL_ERROR "We could not determine the platform. Please clean the ${CMAKE_PROJECT_NAME} environment and try again...")
+if(NOT CMAKE_CROSSCOMPILING)
+  # Whoever put this here doesn't realize you're not supposed to use try_run
+  # to test for a platform :(
+  try_run(PLATFORM_RUN PLATFORM_COMPILE
+          ${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/cmake/platform.c
+          RUN_OUTPUT_VARIABLE PLATFORM_TRIPLET)
+  if(NOT PLATFORM_COMPILE)
+    message(FATAL_ERROR "We could not determine the platform. Please clean the ${CMAKE_PROJECT_NAME} environment and try again... ${PLATFORM_COMPILE}")
+  endif()
+else()
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+    if(IS_MULTICONFIG)
+      set(PLATFORM_TRIPLET "universal-apple-ios")
+    else()
+      set(PLATFORM_TRIPLET "${CMAKE_OSX_ARCHITECTURES}-apple-ios")
+    endif()
+  endif()
 endif()
 set(SOABI "cpython-${PY_VERSION_MAJOR}${PY_VERSION_MINOR}${ABIFLAGS}-${PLATFORM_TRIPLET}")
 

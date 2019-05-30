@@ -160,13 +160,15 @@ add_python_extension(errno BUILTIN REQUIRES IS_PY3 UNIX SOURCES errnomodule.c)
 add_python_extension(_posixsubprocess BUILTIN REQUIRES IS_PY3 UNIX SOURCES _posixsubprocess.c)
 
 # MacOSX-only extensions
-set(_scproxy2_SOURCES ${SRC_DIR}/Mac/Modules/_scproxy.c)
-set(_scproxy3_SOURCES ${SRC_DIR}/Modules/_scproxy.c)
-add_python_extension(_scproxy
-    REQUIRES APPLE HAVE_LIBSYSTEMCONFIGURATION
-    SOURCES ${_scproxy${PY_VERSION_MAJOR}_SOURCES}
-    LIBRARIES ${HAVE_LIBSYSTEMCONFIGURATION}
-)
+if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL iOS)
+    set(_scproxy2_SOURCES ${SRC_DIR}/Mac/Modules/_scproxy.c)
+    set(_scproxy3_SOURCES ${SRC_DIR}/Modules/_scproxy.c)
+    add_python_extension(_scproxy
+        REQUIRES APPLE HAVE_LIBSYSTEMCONFIGURATION
+        SOURCES ${_scproxy${PY_VERSION_MAJOR}_SOURCES}
+        LIBRARIES ${HAVE_LIBSYSTEMCONFIGURATION}
+    )
+endif()
 
 # Linux-only extensions
 add_python_extension(linuxaudiodev REQUIRES LINUX IS_PY2 SOURCES linuxaudiodev.c)
@@ -310,19 +312,45 @@ if(WIN32)
 else()
     set(_libffi_system_extra_src)
     if(APPLE)
-        add_python_extension(_ctypes
-            SOURCES ${ctypes_COMMON_SOURCES}
-                    _ctypes/malloc_closure.c
-                    _ctypes/darwin/dlfcn_simple.c
-                    _ctypes/libffi_osx/ffi.c
-                    _ctypes/libffi_osx/x86/darwin64.S
-                    _ctypes/libffi_osx/x86/x86-darwin.S
-                    _ctypes/libffi_osx/x86/x86-ffi_darwin.c
-                    _ctypes/libffi_osx/x86/x86-ffi64.c
-            INCLUDEDIRS ${SRC_DIR}/Modules/_ctypes/libffi_osx/include
-                        ${SRC_DIR}/Modules/_ctypes/darwin
-            DEFINITIONS MACOSX
-        )
+        if(${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
+            ExternalProject_Add(libffi
+                BUILD_IN_SOURCE 1
+                URL https://github.com/libffi/libffi/releases/download/v3.3-rc0/libffi-3.3-rc0.tar.gz
+                URL_HASH SHA256=403d67aabf1c05157855ea2b1d9950263fb6316536c8c333f5b9ab1eb2f20ecf
+
+                CONFIGURE_COMMAND ./generate-darwin-source-and-headers.py --only-ios
+                BUILD_COMMAND     xcodebuild -project libffi.xcodeproj -target libffi-iOS -arch arm64 -sdk iphoneos -configuration $<CONFIG>
+                COMMAND           xcodebuild -project libffi.xcodeproj -target libffi-iOS -arch x86_64 -sdk iphonesimulator -configuration $<CONFIG>
+                INSTALL_COMMAND   lipo -create -arch arm64 ./build/$<CONFIG>-iphoneos/libffi.a -arch x86_64 ./build/$<CONFIG>-iphonesimulator/libffi.a -output ./build/libffi.a
+                COMMAND           cp -R ./build/$<CONFIG>-iphoneos/include ./build/include
+            )
+            ExternalProject_Get_Property(libffi INSTALL_DIR)
+            message(STATUS "libffi install dir is ${INSTALL_DIR}")
+
+            add_python_extension(_ctypes
+                SOURCES ${ctypes_COMMON_SOURCES}
+                        _ctypes/malloc_closure.c
+                        _ctypes/darwin/dlfcn_simple.c
+                LIBRARIES   ${INSTALL_DIR}/src/libffi/build/libffi.a
+                INCLUDEDIRS ${INSTALL_DIR}/src/libffi/build/include/ffi
+                            ${SRC_DIR}/Modules/_ctypes/darwin
+            )
+            add_dependencies(extension_ctypes libffi)
+        else()
+            add_python_extension(_ctypes
+                SOURCES ${ctypes_COMMON_SOURCES}
+                        _ctypes/malloc_closure.c
+                        _ctypes/darwin/dlfcn_simple.c
+                        _ctypes/libffi_osx/ffi.c
+                        _ctypes/libffi_osx/x86/darwin64.S
+                        _ctypes/libffi_osx/x86/x86-darwin.S
+                        _ctypes/libffi_osx/x86/x86-ffi_darwin.c
+                        _ctypes/libffi_osx/x86/x86-ffi64.c
+                INCLUDEDIRS ${SRC_DIR}/Modules/_ctypes/libffi_osx/include
+                            ${SRC_DIR}/Modules/_ctypes/darwin
+                DEFINITIONS MACOSX
+            )
+        endif()
     else()
         if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
           set(_libffi_system_extra_src
@@ -588,22 +616,24 @@ add_python_extension(${bz2_${PY_VERSION_MAJOR}_NAME}
     LIBRARIES ${BZIP2_LIBRARIES}
     INCLUDEDIRS ${BZIP2_INCLUDE_DIR}
 )
-set(curses_common_REQUIRES CURSES_LIBRARIES)
-set(curses_common_LIBRARIES ${CURSES_LIBRARIES})
-if(WITH_STATIC_DEPENDENCIES)
-    list(APPEND curses_common_REQUIRES TINFO_LIBRARY GPM_LIBRARY)
-    list(APPEND curses_common_LIBRARIES ${TINFO_LIBRARY} ${GPM_LIBRARY})
+if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL iOS)
+    set(curses_common_REQUIRES CURSES_LIBRARIES)
+    set(curses_common_LIBRARIES ${CURSES_LIBRARIES})
+    if(WITH_STATIC_DEPENDENCIES)
+        list(APPEND curses_common_REQUIRES TINFO_LIBRARY GPM_LIBRARY)
+        list(APPEND curses_common_LIBRARIES ${TINFO_LIBRARY} ${GPM_LIBRARY})
+    endif()
+    add_python_extension(_curses_panel
+        REQUIRES ${curses_common_REQUIRES} PANEL_LIBRARIES "HAVE_PANEL_H OR HAVE_NCURSES_PANEL_H"
+        SOURCES _curses_panel.c
+        LIBRARIES ${curses_common_LIBRARIES} ${PANEL_LIBRARIES}
+    )
+    add_python_extension(_curses
+        REQUIRES ${curses_common_REQUIRES}
+        SOURCES _cursesmodule.c
+        LIBRARIES ${curses_common_LIBRARIES}
+    )
 endif()
-add_python_extension(_curses_panel
-    REQUIRES ${curses_common_REQUIRES} PANEL_LIBRARIES "HAVE_PANEL_H OR HAVE_NCURSES_PANEL_H"
-    SOURCES _curses_panel.c
-    LIBRARIES ${curses_common_LIBRARIES} ${PANEL_LIBRARIES}
-)
-add_python_extension(_curses
-    REQUIRES ${curses_common_REQUIRES}
-    SOURCES _cursesmodule.c
-    LIBRARIES ${curses_common_LIBRARIES}
-)
 set(dbm2_SOURCES dbmmodule.c)
 set(dbm3_SOURCES _dbmmodule.c)
 if(IS_PY3)

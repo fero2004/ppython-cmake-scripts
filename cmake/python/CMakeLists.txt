@@ -30,7 +30,11 @@ endif()
 # Export target
 set_property(GLOBAL APPEND PROPERTY PYTHON_TARGETS python)
 
-install(TARGETS python EXPORT PythonTargets RUNTIME DESTINATION ${BIN_INSTALL_DIR} COMPONENT Runtime)
+install(TARGETS python
+        EXPORT PythonTargets
+        RUNTIME DESTINATION ${BIN_INSTALL_DIR}
+        BUNDLE DESTINATION ${BIN_INSTALL_DIR}
+        COMPONENT Runtime)
 
 # See "is_python_build()" in sysconfig.py
 add_custom_command(TARGET python PRE_BUILD
@@ -48,7 +52,7 @@ if(WIN32)
         )
 endif()
 
-if(UNIX AND PY_VERSION VERSION_GREATER "2.7.4")
+if(UNIX AND PY_VERSION VERSION_GREATER "2.7.4" AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL iOS)
     # Setup landmark allowing to run the interpreter from a build tree. See 'getpath.c' for details.
     set(_sysconfigdata_py "_sysconfigdata.py")
     if("${PY_VERSION}" VERSION_EQUAL "3.6.0" OR "${PY_VERSION}" VERSION_GREATER "3.6.0")
