@@ -335,7 +335,10 @@ else()
                 INCLUDEDIRS ${INSTALL_DIR}/src/libffi/build/include/ffi
                             ${SRC_DIR}/Modules/_ctypes/darwin
             )
-            add_dependencies(extension_ctypes libffi)
+
+            if(NOT WITH_STATIC_DEPENDENCIES)
+                add_dependencies(extension_ctypes libffi)
+            endif()
         else()
             add_python_extension(_ctypes
                 SOURCES ${ctypes_COMMON_SOURCES}

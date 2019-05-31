@@ -596,6 +596,11 @@ endif()
 
 if(NOT BUILD_LIBPYTHON_SHARED)
     add_libpython(libpython-static STATIC ${INSTALL_DEVELOPMENT} Development)
+
+    if(WITH_STATIC_DEPENDENCIES AND TARGET libffi)
+        add_dependencies(libpython-static libffi)
+    endif()
+
     if(HAVE_TARGET_COMPILE_DEFINITIONS)
         target_compile_definitions(libpython-static PUBLIC Py_NO_ENABLE_SHARED)
     else()
