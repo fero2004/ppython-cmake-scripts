@@ -394,36 +394,42 @@ endif()
 set(LIBPYTHON_FROZEN_SOURCES )
 if(IS_PY3)
 
-# Build _freeze_importlib executable
-add_executable(_freeze_importlib
-  ${SRC_DIR}/Programs/_freeze_importlib.c
-  ${LIBPYTHON_OMIT_FROZEN_SOURCES}
-  )
-target_link_libraries(_freeze_importlib ${LIBPYTHON_TARGET_LIBRARIES})
-if(builtin_compile_definitions_without_py_limited_api)
-  target_compile_definitions(_freeze_importlib PUBLIC ${builtin_compile_definitions_without_py_limited_api})
+if(NOT CMAKE_CROSSCOMPILING)
+    # Build _freeze_importlib executable
+    add_executable(_freeze_importlib
+      ${SRC_DIR}/Programs/_freeze_importlib.c
+      ${LIBPYTHON_OMIT_FROZEN_SOURCES}
+      )
+    target_link_libraries(_freeze_importlib ${LIBPYTHON_TARGET_LIBRARIES})
+    if(builtin_compile_definitions_without_py_limited_api)
+      target_compile_definitions(_freeze_importlib PUBLIC ${builtin_compile_definitions_without_py_limited_api})
+    endif()
+
+    export(TARGETS _freeze_importlib APPEND FILE NativeExports.cmake)
 endif()
 
-# Freeze modules
-set(LIBPYTHON_FROZEN_SOURCES
-  ${SRC_DIR}/Python/importlib_external.h
-  ${SRC_DIR}/Python/importlib.h
-)
-add_custom_command(
-  OUTPUT ${LIBPYTHON_FROZEN_SOURCES}
-  COMMAND
-    ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:_freeze_importlib>
-      ${SRC_DIR}/Lib/importlib/_bootstrap_external.py
+if(TARGET _freeze_importlib)
+    # Freeze modules
+    set(LIBPYTHON_FROZEN_SOURCES
       ${SRC_DIR}/Python/importlib_external.h
-  COMMAND
-    ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:_freeze_importlib>
-      ${SRC_DIR}/Lib/importlib/_bootstrap.py
       ${SRC_DIR}/Python/importlib.h
-  DEPENDS
-    _freeze_importlib
-    ${SRC_DIR}/Lib/importlib/_bootstrap_external.py
-    ${SRC_DIR}/Lib/importlib/_bootstrap.py
-)
+    )
+    add_custom_command(
+      OUTPUT ${LIBPYTHON_FROZEN_SOURCES}
+      COMMAND
+        $<TARGET_FILE:_freeze_importlib>
+          ${SRC_DIR}/Lib/importlib/_bootstrap_external.py
+          ${SRC_DIR}/Python/importlib_external.h
+      COMMAND
+        $<TARGET_FILE:_freeze_importlib>
+          ${SRC_DIR}/Lib/importlib/_bootstrap.py
+          ${SRC_DIR}/Python/importlib.h
+      DEPENDS
+        _freeze_importlib
+        ${SRC_DIR}/Lib/importlib/_bootstrap_external.py
+        ${SRC_DIR}/Lib/importlib/_bootstrap.py
+    )
+endif()
 
 # This is a convenience target allowing to regenerate
 # the frozen sources.
@@ -590,6 +596,11 @@ endif()
 
 if(NOT BUILD_LIBPYTHON_SHARED)
     add_libpython(libpython-static STATIC ${INSTALL_DEVELOPMENT} Development)
+
+    if(WITH_STATIC_DEPENDENCIES AND TARGET libffi)
+        add_dependencies(libpython-static libffi)
+    endif()
+
     if(HAVE_TARGET_COMPILE_DEFINITIONS)
         target_compile_definitions(libpython-static PUBLIC Py_NO_ENABLE_SHARED)
     else()

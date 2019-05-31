@@ -13,6 +13,9 @@ Makefile
 /Misc/
 /share/
 
+/build-*
+/install-*
+
 # Ignore all dotfiles...
 .*
 !.gitattributes

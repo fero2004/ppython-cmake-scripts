@@ -1,0 +1,12 @@
+--- a/Modules/_decimal/libmpdec/mpdecimal.h 2018-06-26 18:39:50.000000000 -0500
++++ b/Modules/_decimal/libmpdec/mpdecimal.h 2019-05-29 14:11:39.000000000 -0500
+@@ -135,6 +135,9 @@
+   #elif defined(__x86_64__)
+     #define CONFIG_64
+     #define ASM
++  #elif defined(__aarch64__)
++    #define CONFIG_64
++    #define ANSI
+   #else
+     #error "unknown architecture for universal build."
+   #endif

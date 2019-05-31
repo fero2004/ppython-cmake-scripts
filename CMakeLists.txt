@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8.6)
 
-set(PYTHON_VERSION "3.6.7" CACHE STRING "The version of Python to build.")
+include(ExternalProject)
+
+# So clang won't flip out about codesigning.
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+set(PYTHON_VERSION "3.6.6" CACHE STRING "The version of Python to build.")
 
 string(REPLACE "." ";" VERSION_LIST ${PYTHON_VERSION})
 list(GET VERSION_LIST 0 PY_VERSION_MAJOR)
@@ -8,19 +13,45 @@ list(GET VERSION_LIST 1 PY_VERSION_MINOR)
 list(GET VERSION_LIST 2 PY_VERSION_PATCH)
 set(PY_VERSION "${PY_VERSION_MAJOR}.${PY_VERSION_MINOR}.${PY_VERSION_PATCH}")
 
-if(NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_CONFIGURATION_TYPES "Release;Debug" CACHE STRING "Release configuration" FORCE)
+get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
+set(CMAKE_CONFIGURATION_TYPES "Release;Debug" CACHE STRING "Build configurations")
+if(NOT IS_MULTICONFIG)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Current configuration")
+>>>>>>> ios
 endif()
 
 if(APPLE)
-  set(_msg "Checking which MACOSX_DEPLOYMENT_TARGET to use")
-  message(STATUS "${_msg}")
-  include(cmake/PythonAutoDetectOSX.cmake)
-  set(MACOSX_DEPLOYMENT_TARGET ${CMAKE_OSX_DEPLOYMENT_TARGET})
-  message(STATUS "${_msg} - ${MACOSX_DEPLOYMENT_TARGET}")
+    if (${CMAKE_SYSTEM_NAME} MATCHES "iOS")
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "9.0" CACHE STRING "")
+        set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
+        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO")
+        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "")
+        set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO") # for now
+
+        if(NOT IS_MULTICONFIG)
+            # We're on a single-configuration build type, so define the available
+            # architectures.
+            set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "")
+            include("cmake/TryRunResults-iOS-${CMAKE_OSX_ARCHITECTURES}.cmake")
+        endif()
+    else()
+        set(_msg "Checking which MACOSX_DEPLOYMENT_TARGET to use")
+        message(STATUS "${_msg}")
+        include(cmake/PythonAutoDetectOSX.cmake)
+        set(MACOSX_DEPLOYMENT_TARGET ${CMAKE_OSX_DEPLOYMENT_TARGET})
+        message(STATUS "${_msg} - ${MACOSX_DEPLOYMENT_TARGET}")
+    endif()
 endif()
 
 project(Python C ASM)
+
+if(CMAKE_CROSSCOMPILING)
+    set(IMPORT_NATIVE_EXECUTABLES "" CACHE FILEPATH "Native executables used in cross-compiling")
+    if(${IMPORT_NATIVE_EXECUTABLES})
+        include(${IMPORT_NATIVE_EXECUTABLES})
+    endif()
+endif()
 
 if(POLICY CMP0042)
     cmake_policy(SET CMP0042 OLD)
@@ -383,7 +414,11 @@ if(UNIX)
                    ${PYCONFIG_BUILD_DIR}/pyconfig-gen.h)
 
     set(pyconfig_out ${PYCONFIG_BUILD_DIR}/pyconfig.h)
+<<<<<<< HEAD
     if(CMAKE_BUILD_TYPE STREQUAL "")
+=======
+    if(IS_MULTICONFIG)
+>>>>>>> ios
         set(pyconfig_out ${PYCONFIG_BUILD_DIR}/$<CONFIG>/pyconfig.h)
     endif()
 
@@ -596,7 +631,11 @@ if(UNIX)
     
     
     set(makefile_out "${BIN_BUILD_DIR}/Makefile")
+<<<<<<< HEAD
     if(CMAKE_BUILD_TYPE STREQUAL "")
+=======
+    if(IS_MULTICONFIG)
+>>>>>>> ios
         set(makefile_out "${BIN_BUILD_DIR}/$<CONFIG>/Makefile")
     endif()
 
