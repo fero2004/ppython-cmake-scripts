@@ -18,7 +18,6 @@ get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 set(CMAKE_CONFIGURATION_TYPES "Release;Debug" CACHE STRING "Build configurations")
 if(NOT IS_MULTICONFIG)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Current configuration")
->>>>>>> ios
 endif()
 
 if(APPLE)
