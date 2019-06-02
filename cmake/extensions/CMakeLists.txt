@@ -319,10 +319,10 @@ else()
                 URL_HASH SHA256=403d67aabf1c05157855ea2b1d9950263fb6316536c8c333f5b9ab1eb2f20ecf
 
                 CONFIGURE_COMMAND ./generate-darwin-source-and-headers.py --only-ios
-                BUILD_COMMAND     xcodebuild -project libffi.xcodeproj -target libffi-iOS -arch arm64 -sdk iphoneos -configuration $<CONFIG>
-                COMMAND           xcodebuild -project libffi.xcodeproj -target libffi-iOS -arch x86_64 -sdk iphonesimulator -configuration $<CONFIG>
-                INSTALL_COMMAND   lipo -create -arch arm64 ./build/$<CONFIG>-iphoneos/libffi.a -arch x86_64 ./build/$<CONFIG>-iphonesimulator/libffi.a -output ./build/libffi.a
-                COMMAND           cp -R ./build/$<CONFIG>-iphoneos/include ./build/include
+                BUILD_COMMAND     xcodebuild -project libffi.xcodeproj -target libffi-iOS -arch arm64 -sdk iphoneos -configuration Release
+                COMMAND           xcodebuild -project libffi.xcodeproj -target libffi-iOS -arch x86_64 -sdk iphonesimulator -configuration Release
+                INSTALL_COMMAND   lipo -create -arch arm64 ./build/Release-iphoneos/libffi.a -arch x86_64 ./build/Release-iphonesimulator/libffi.a -output ./build/libffi.a
+                COMMAND           cp -R ./build/Release-iphoneos/include ./build/include
             )
             ExternalProject_Get_Property(libffi INSTALL_DIR)
             message(STATUS "libffi install dir is ${INSTALL_DIR}")
