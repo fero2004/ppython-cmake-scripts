@@ -413,11 +413,7 @@ if(UNIX)
                    ${PYCONFIG_BUILD_DIR}/pyconfig-gen.h)
 
     set(pyconfig_out ${PYCONFIG_BUILD_DIR}/pyconfig.h)
-<<<<<<< HEAD
-    if(CMAKE_BUILD_TYPE STREQUAL "")
-=======
     if(IS_MULTICONFIG)
->>>>>>> ios
         set(pyconfig_out ${PYCONFIG_BUILD_DIR}/$<CONFIG>/pyconfig.h)
     endif()
 
@@ -630,11 +626,7 @@ if(UNIX)
     
     
     set(makefile_out "${BIN_BUILD_DIR}/Makefile")
-<<<<<<< HEAD
-    if(CMAKE_BUILD_TYPE STREQUAL "")
-=======
     if(IS_MULTICONFIG)
->>>>>>> ios
         set(makefile_out "${BIN_BUILD_DIR}/$<CONFIG>/Makefile")
     endif()
 
