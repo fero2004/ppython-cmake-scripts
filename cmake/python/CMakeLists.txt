@@ -27,13 +27,16 @@ if(MSVC)
     set_target_properties(python PROPERTIES LINK_FLAGS /STACK:2000000)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL iOS)
+    set_target_properties(python PROPERTIES MACOSX_BUNDLE OFF)
+endif()
+
 # Export target
 set_property(GLOBAL APPEND PROPERTY PYTHON_TARGETS python)
 
 install(TARGETS python
         EXPORT PythonTargets
         RUNTIME DESTINATION ${BIN_INSTALL_DIR}
-        BUNDLE DESTINATION ${BIN_INSTALL_DIR}
         COMPONENT Runtime)
 
 # See "is_python_build()" in sysconfig.py
@@ -52,7 +55,7 @@ if(WIN32)
         )
 endif()
 
-if(UNIX AND PY_VERSION VERSION_GREATER "2.7.4" AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL iOS)
+if(UNIX AND PY_VERSION VERSION_GREATER "2.7.4")
     # Setup landmark allowing to run the interpreter from a build tree. See 'getpath.c' for details.
     set(_sysconfigdata_py "_sysconfigdata.py")
     if("${PY_VERSION}" VERSION_EQUAL "3.6.0" OR "${PY_VERSION}" VERSION_GREATER "3.6.0")
@@ -60,7 +63,36 @@ if(UNIX AND PY_VERSION VERSION_GREATER "2.7.4" AND NOT ${CMAKE_SYSTEM_NAME} STRE
         set(MULTIARCH "")
         set(_sysconfigdata_py "_sysconfigdata_${ABIFLAGS}_${PY_PLATFORM}_${MULTIARCH}.py")
     endif()
-    add_custom_command(
+    if(CMAKE_SYSTEM_NAME STREQUAL iOS)
+        add_custom_target(update_sysconfig ALL DEPENDS python)
+        message(STATUS "Executing ${PYTHON_WRAPPER_COMMAND} ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:python> -E -S -m sysconfig --generate-posix-vars")
+        if(CMAKE_OSX_ARCHITECTURES STREQUAL x86_64)
+            add_custom_command(TARGET update_sysconfig POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/include/python${LD_VERSION}
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PYCONFIG_BUILD_DIR}/pyconfig.h ${PROJECT_BINARY_DIR}/include/python${LD_VERSION}/pyconfig.h
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/lib/python${LIBPYTHON_VERSION}/config-${LD_VERSION}
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${BIN_BUILD_DIR}/Makefile ${PROJECT_BINARY_DIR}/lib/python${LIBPYTHON_VERSION}/config-${LD_VERSION}/Makefile
+            COMMAND ${CMAKE_COMMAND} -E env SIMCTL_CHILD_PYTHONHOME=${PROJECT_BINARY_DIR} ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:python> -S -m sysconfig --generate-posix-vars
+            COMMENT "Relocate ${_sysconfigdata_py} and update pybuilddir.txt"
+            WORKING_DIRECTORY ${BIN_BUILD_DIR}
+            )
+        endif()
+        if(DEFINED IOS_CORESIM_PATH)
+            add_custom_command(TARGET update_sysconfig POST_BUILD
+            COMMAND ${CMAKE_COMMAND}
+              -DBIN_BUILD_DIR:PATH=${IOS_CORESIM_PATH}
+              -DSYSCONFIGDATA_PY:STRING=${_sysconfigdata_py}
+              -DPYTHON_BINARY_DIR:PATH=${PROJECT_BINARY_DIR}
+              -DEXTENSION_INSTALL_DIR:PATH=${EXTENSION_INSTALL_DIR}
+              -P ${PROJECT_SOURCE_DIR}/cmake/UpdateSysconfig.cmake
+            COMMENT "Relocate ${_sysconfigdata_py} and update pybuilddir.txt"
+            WORKING_DIRECTORY ${IOS_CORESIM_PATH}
+            )
+            install(FILES ${EXTENSION_BUILD_DIR}/${_sysconfigdata_py}
+                DESTINATION ${PYTHONHOME}/)
+        endif()
+    else()
+        add_custom_command(
         OUTPUT ${BIN_BUILD_DIR}/pybuilddir.txt ${EXTENSION_BUILD_DIR}/${_sysconfigdata_py}
         COMMAND ${PYTHON_WRAPPER_COMMAND}
           ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:python> -E -S -m sysconfig --generate-posix-vars
@@ -74,11 +106,12 @@ if(UNIX AND PY_VERSION VERSION_GREATER "2.7.4" AND NOT ${CMAKE_SYSTEM_NAME} STRE
         WORKING_DIRECTORY ${BIN_BUILD_DIR}
         DEPENDS python
         )
-    add_custom_target(update_sysconfig ALL
-        DEPENDS ${BIN_BUILD_DIR}/pybuilddir.txt ${EXTENSION_BUILD_DIR}/${_sysconfigdata_py}
-        )
-    install(FILES ${EXTENSION_BUILD_DIR}/${_sysconfigdata_py}
-        DESTINATION ${PYTHONHOME}/)
+        add_custom_target(update_sysconfig ALL
+            DEPENDS ${BIN_BUILD_DIR}/pybuilddir.txt ${EXTENSION_BUILD_DIR}/${_sysconfigdata_py}
+            )
+        install(FILES ${EXTENSION_BUILD_DIR}/${_sysconfigdata_py}
+            DESTINATION ${PYTHONHOME}/)
+    endif()
 endif()
 
 if(UNIX AND NOT CMAKE_CROSSCOMPILING)
@@ -104,7 +137,7 @@ endif()
 set(SRC_GDB_HOOKS ${SRC_DIR}/Tools/gdb/libpython.py)
 configure_file(
     ${SRC_GDB_HOOKS}
-    ${BIN_BUILD_DIR}/python-gdb.py
+    ${BIN_BUILD_DIR}/libpython.py
     COPYONLY
 )
 if(INSTALL_DEVELOPMENT)

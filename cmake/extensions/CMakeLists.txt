@@ -336,7 +336,7 @@ else()
                             ${SRC_DIR}/Modules/_ctypes/darwin
             )
 
-            if(NOT WITH_STATIC_DEPENDENCIES)
+            if(NOT WITH_STATIC_DEPENDENCIES AND NOT BUILD_EXTENSIONS_AS_BUILTIN)
                 add_dependencies(extension_ctypes libffi)
             endif()
         else()

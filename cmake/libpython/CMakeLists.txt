@@ -482,11 +482,17 @@ function(add_libpython name type install component)
         set_target_properties(${name} PROPERTIES LINK_FLAGS /OPT:NOICF)
     endif()
 
+    if(CMAKE_SYSTEM_NAME STREQUAL iOS)
+        set(INSTALL_NAME "@rpath")
+    else()
+        set(INSTALL_NAME "${CMAKE_INSTALL_PREFIX}/${LIBPYTHON_LIBDIR}")
+    endif()
+
     set_target_properties(${name} PROPERTIES
         OUTPUT_NAME ${LIBPYTHON}${ABIFLAGS}
         LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${LIBPYTHON_LIBDIR}
         RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${LIBPYTHON_LIBDIR}
-        INSTALL_NAME_DIR ${CMAKE_INSTALL_PREFIX}/${LIBPYTHON_LIBDIR}
+        INSTALL_NAME_DIR ${INSTALL_NAME}
     )
     if(HAVE_POSITION_INDEPENDENT_CODE)
         set_target_properties(${name} PROPERTIES
