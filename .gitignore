@@ -13,7 +13,7 @@ Makefile
 /Misc/
 /share/
 
-/build-*
+/build-*/
 /install-*
 
 # Ignore all dotfiles...
