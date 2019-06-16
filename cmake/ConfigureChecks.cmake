@@ -2515,3 +2515,7 @@ endif()
 if(CMAKE_SYSTEM MATCHES Windows)
   set(PY_PLATFORM win32)
 endif()
+
+if(CMAKE_SYSTEM MATCHES iOS)
+  set(PY_PLATFORM ios)
+endif()
