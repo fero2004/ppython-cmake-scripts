@@ -45,19 +45,22 @@ endif()
 
 project(Python C ASM)
 
-if(CMAKE_CROSSCOMPILING)
-    set(IMPORT_NATIVE_EXECUTABLES "" CACHE FILEPATH "Native executables used in cross-compiling")
-    if(${IMPORT_NATIVE_EXECUTABLES})
-        include(${IMPORT_NATIVE_EXECUTABLES})
-    endif()
-endif()
-
 if(POLICY CMP0042)
     cmake_policy(SET CMP0042 OLD)
 endif()
 
 if(CMAKE_CROSSCOMPILING)
-    cmake_minimum_required(VERSION 3.3) # Version introducing CROSSCOMPILING_EMULATOR
+  cmake_minimum_required(VERSION 3.3) # Version introducing CROSSCOMPILING_EMULATOR
+
+  # Import the host executables used for building.
+  set(IMPORT_NATIVE_EXECUTABLES "" CACHE FILEPATH "Native executables used in cross-compiling")
+  if(EXISTS ${IMPORT_NATIVE_EXECUTABLES})
+    include(${IMPORT_NATIVE_EXECUTABLES})
+  endif()
+
+  if(CMAKE_SYSTEM_NAME STREQUAL iOS)
+    set(CMAKE_CROSSCOMPILING_EMULATOR xcrun simctl spawn booted)
+  endif()
 endif()
 
 # Include helper functions
