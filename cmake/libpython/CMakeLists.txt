@@ -520,6 +520,10 @@ if(BUILD_LIBPYTHON_SHARED)
         set_property(
             SOURCE ${SRC_DIR}/Modules/posixmodule.c
             APPEND PROPERTY COMPILE_DEFINITIONS WITH_NEXT_FRAMEWORK)
+
+        if(CMAKE_SYSTEM_NAME STREQUAL iOS AND BUILTIN_CTYPES)
+            add_dependencies(libpython-shared libffi)
+        endif()
     endif()
 
     set(targetname "libpython3-shared")
