@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import subprocess, os, argparse, json
 
 # Create dummy namespace to store arguments in.
@@ -8,6 +9,7 @@ cpus = os.cpu_count()
 
 argparser = argparse.ArgumentParser(description='Build Python for iOS.')
 argparser.add_argument('--build-dir', default='built-ios')
+argparser.add_argument('--install-dir', default='install')
 argparser.add_argument('--arch', default='arm64', choices=['arm64', 'x86_64'])
 argparser.add_argument('--sim-device', default='iPhone 6')
 argparser.add_argument('--runtime-ver', default='12.2')
@@ -51,21 +53,25 @@ subprocess.run(['xcrun', 'simctl', 'shutdown', 'all'], check=True)
 print('Booting up {}...'.format(device_udid))
 subprocess.run(['xcrun', 'simctl', 'boot', device_udid], check=True)
 
+int_build_options = ['-DCMAKE_STATIC_DEPENDENCIES=ON']
+final_build_options = ['-DBUILD_LIBPYTHON_SHARED=ON', '-DBUILD_EXTENSIONS_AS_BUILTIN=ON', '-DCMAKE_INSTALL_PREFIX={}'.format(args.install_dir), '-DIOS_CORESIM_PATH={}'.format(coresim_path)]
+
 # Depending on if we're just doing a simulator build or an arm64 build,
 # generate the update_sysconfig files and install them.
 try:
     native_exports_loc = os.path.abspath(os.path.join(darwin_build_loc, 'CMakeBuild/libpython/NativeExports.cmake'))
     os.makedirs(sim_build_loc, exist_ok=True)
-    subprocess.run(['cmake', '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES=x86_64', '-DCMAKE_OSX_SYSROOT=iphonesimulator', '-DCMAKE_INSTALL_PREFIX=install', '-DWITH_STATIC_DEPENDENCIES=ON', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), base_cmake_dir], cwd=sim_build_loc, check=True)
-    if args.arch != 'x86_64':
+    if args.arch == 'x86_64':
+        subprocess.run(['cmake', '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES=x86_64', '-DCMAKE_OSX_SYSROOT=iphonesimulator', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), *final_build_options, base_cmake_dir], cwd=sim_build_loc, check=True)
+        subprocess.run(['make', 'install', '-j{}'.format(cpus)], cwd=sim_build_loc, check=True)
+    else:
+        subprocess.run(['cmake', '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES=x86_64', '-DCMAKE_OSX_SYSROOT=iphonesimulator', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), *int_build_options, base_cmake_dir], cwd=sim_build_loc, check=True)
         subprocess.run(['make', '-j{}'.format(cpus)], cwd=sim_build_loc, check=True)
     
         device_build_loc = os.path.join(args.build_dir, 'ios-arm64')
         os.makedirs(device_build_loc, exist_ok=True)
-        
-        subprocess.run(['cmake', '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES={}'.format(args.arch), '-DCMAKE_OSX_SYSROOT=iphoneos', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), '-DIOS_CORESIM_PATH={}'.format(coresim_path), '-DCMAKE_INSTALL_PREFIX=install', '-DBUILD_LIBPYTHON_SHARED=ON', '-DBUILD_EXTENSIONS_AS_BUILTIN=ON', base_cmake_dir], cwd=device_build_loc, check=True)
+
+        subprocess.run(['cmake', '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES={}'.format(args.arch), '-DCMAKE_OSX_SYSROOT=iphoneos', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), *final_build_options, base_cmake_dir], cwd=device_build_loc, check=True)
         subprocess.run(['make', 'install', '-j{}'.format(cpus)], cwd=device_build_loc, check=True)
-    else:
-        subprocess.run(['make', 'install', '-j{}'.format(cpus)], cwd=sim_build_loc, check=True)
 finally:
     subprocess.run(['xcrun', 'simctl', 'shutdown', device_udid])
