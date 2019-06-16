@@ -21,26 +21,26 @@ if(NOT IS_MULTICONFIG)
 endif()
 
 if(APPLE)
-    if (${CMAKE_SYSTEM_NAME} MATCHES "iOS")
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "9.0" CACHE STRING "")
-        set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
-        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO")
-        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "")
-        set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO") # for now
+  if (${CMAKE_SYSTEM_NAME} MATCHES "iOS")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "9.0" CACHE STRING "")
+    set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
+    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO")
+    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "")
+    set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO") # for now
 
-        if(NOT IS_MULTICONFIG)
-            # We're on a single-configuration build type, so define the available
-            # architectures.
-            set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "")
-            include("cmake/TryRunResults-iOS-${CMAKE_OSX_ARCHITECTURES}.cmake")
-        endif()
-    else()
-        set(_msg "Checking which MACOSX_DEPLOYMENT_TARGET to use")
-        message(STATUS "${_msg}")
-        include(cmake/PythonAutoDetectOSX.cmake)
-        set(MACOSX_DEPLOYMENT_TARGET ${CMAKE_OSX_DEPLOYMENT_TARGET})
-        message(STATUS "${_msg} - ${MACOSX_DEPLOYMENT_TARGET}")
+    if(NOT IS_MULTICONFIG)
+      # We're on a single-configuration build type, so define the available
+      # architectures.
+      set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "")
+      include("cmake/TryRunResults-iOS-${CMAKE_OSX_ARCHITECTURES}.cmake")
     endif()
+  else()
+    set(_msg "Checking which MACOSX_DEPLOYMENT_TARGET to use")
+    message(STATUS "${_msg}")
+    include(cmake/PythonAutoDetectOSX.cmake)
+    set(MACOSX_DEPLOYMENT_TARGET ${CMAKE_OSX_DEPLOYMENT_TARGET})
+    message(STATUS "${_msg} - ${MACOSX_DEPLOYMENT_TARGET}")
+  endif()
 endif()
 
 project(Python C ASM)
