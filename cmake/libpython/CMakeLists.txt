@@ -429,11 +429,11 @@ if(TARGET _freeze_importlib)
         ${SRC_DIR}/Lib/importlib/_bootstrap_external.py
         ${SRC_DIR}/Lib/importlib/_bootstrap.py
     )
-endif()
 
-# This is a convenience target allowing to regenerate
-# the frozen sources.
-add_custom_target(freeze_modules DEPENDS ${LIBPYTHON_FROZEN_SOURCES})
+    # This is a convenience target allowing to regenerate
+    # the frozen sources.
+    add_custom_target(freeze_modules DEPENDS ${LIBPYTHON_FROZEN_SOURCES})
+endif()
 
 endif()
 
