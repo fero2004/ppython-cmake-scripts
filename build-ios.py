@@ -15,6 +15,7 @@ argparser.add_argument('--sim-device', default='iPhone 6')
 argparser.add_argument('--runtime-ver', default='12.2')
 argparser.add_argument('--coresimulator-path', default='{}/Library/Developer/CoreSimulator/Devices'.format(os.environ['HOME']))
 argparser.add_argument('--suppress-stdout', action='store_const', const=subprocess.DEVNULL)
+argparser.add_argument('--configuration', default='Debug')
 argparser.parse_args(namespace=args)
 
 # Build all of the paths we need.
@@ -29,7 +30,7 @@ print("Building for {} on iOS {}".format(args.arch, args.runtime_ver))
 
 # Run a host build for _freeze_importlib, which is utilized during the crosscompile builds.
 os.makedirs(darwin_build_loc, exist_ok=True)
-subprocess.run(['cmake', base_cmake_dir], cwd=darwin_build_loc, check=True, stdout=args.suppress_stdout)
+subprocess.run(['cmake', '-DCMAKE_BUILD_TYPE={}'.format(args.configuration), base_cmake_dir], cwd=darwin_build_loc, check=True, stdout=args.suppress_stdout)
 subprocess.run(['make', '_freeze_importlib', '-j{}'.format(cpus)], cwd=darwin_build_loc, check=True, stdout=args.suppress_stdout)
 
 # Look for the specified simulator device, and bail if we can't find it.
@@ -63,16 +64,16 @@ try:
     native_exports_loc = os.path.abspath(os.path.join(darwin_build_loc, 'CMakeBuild/libpython/NativeExports.cmake'))
     os.makedirs(sim_build_loc, exist_ok=True)
     if args.arch == 'x86_64':
-        subprocess.run(['cmake', '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES=x86_64', '-DCMAKE_OSX_SYSROOT=iphonesimulator', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), *final_build_options, base_cmake_dir], cwd=sim_build_loc, check=True, stdout=args.suppress_stdout)
+        subprocess.run(['cmake', '-DCMAKE_BUILD_TYPE={}'.format(args.configuration), '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES=x86_64', '-DCMAKE_OSX_SYSROOT=iphonesimulator', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), *final_build_options, base_cmake_dir], cwd=sim_build_loc, check=True, stdout=args.suppress_stdout)
         subprocess.run(['make', 'install', '-j{}'.format(cpus)], cwd=sim_build_loc, check=True, stdout=args.suppress_stdout)
     else:
-        subprocess.run(['cmake', '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES=x86_64', '-DCMAKE_OSX_SYSROOT=iphonesimulator', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), *int_build_options, base_cmake_dir], cwd=sim_build_loc, check=True, stdout=args.suppress_stdout)
+        subprocess.run(['cmake', '-DCMAKE_BUILD_TYPE={}'.format(args.configuration), '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES=x86_64', '-DCMAKE_OSX_SYSROOT=iphonesimulator', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), *int_build_options, base_cmake_dir], cwd=sim_build_loc, check=True, stdout=args.suppress_stdout)
         subprocess.run(['make', '-j{}'.format(cpus)], cwd=sim_build_loc, check=True, stdout=args.suppress_stdout)
     
         device_build_loc = os.path.join(args.build_dir, 'ios-arm64')
         os.makedirs(device_build_loc, exist_ok=True)
 
-        subprocess.run(['cmake', '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES={}'.format(args.arch), '-DCMAKE_OSX_SYSROOT=iphoneos', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), *final_build_options, base_cmake_dir], cwd=device_build_loc, check=True, stdout=args.suppress_stdout)
+        subprocess.run(['cmake', '-DCMAKE_BUILD_TYPE={}'.format(args.configuration), '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_ARCHITECTURES={}'.format(args.arch), '-DCMAKE_OSX_SYSROOT=iphoneos', '-DIMPORT_NATIVE_EXECUTABLES={}'.format(native_exports_loc), *final_build_options, base_cmake_dir], cwd=device_build_loc, check=True, stdout=args.suppress_stdout)
         subprocess.run(['make', 'install', '-j{}'.format(cpus)], cwd=device_build_loc, check=True, stdout=args.suppress_stdout)
 finally:
     subprocess.run(['xcrun', 'simctl', 'shutdown', device_udid])
