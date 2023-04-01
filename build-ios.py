@@ -35,8 +35,8 @@ subprocess.run(['make', '_freeze_importlib', '-j{}'.format(cpus)], cwd=darwin_bu
 
 # Look for the specified simulator device, and bail if we can't find it.
 print('Looking for Simulator "{}"'.format(args.sim_device))
-device_json = subprocess.run(['xcrun', 'simctl', 'list', '--json'], check=True)
-devices = json.loads(device_json.stdout)
+device_json = subprocess.check_output(['xcrun', 'simctl', 'list', '--json'])
+devices = json.loads(device_json)
 runtime = devices['devices']['com.apple.CoreSimulator.SimRuntime.iOS-{}'.format(args.runtime_ver.replace('.', '-'))]
 device_udid = [dev['udid'] for dev in runtime if dev['name'] == args.sim_device and dev['isAvailable']][0]
 if device_udid:
